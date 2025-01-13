@@ -1,1 +1,202 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заметки</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            height: 100vh;
+            padding-left: 50px; /* Отступ слева */
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: black; /* Фон по умолчанию */
+        }
+
+        .active {
+            display: flex;
+        }
+
+        .button {
+            background-color: transparent; /* Прозрачный фон */
+            color: gold; /* Золотой текст */
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            color: #ffd700; /* Более яркий золотой при наведении */
+        }
+
+        .back-button, .add-button {
+            position: absolute;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            color: gold; /* Золотой текст */
+            background-color: transparent;
+            border: 1px solid gold; /* Обводка кнопки */
+        }
+
+        .back-button {
+            top: 10px;
+            left: 10px;
+        }
+
+        .add-button {
+            top: 10px;
+            right: 10px;
+        }
+
+        .pin-keyboard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .pin-keyboard button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 18px;
+            background-color: #333;
+            color: gold; /* Золотой текст */
+            border: 1px solid gold; /* Золотая обводка */
+            cursor: pointer;
+        }
+
+        .pin-keyboard button:hover {
+            background-color: #555;
+        }
+
+        .list {
+            text-align: left;
+            margin-top: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+            width: 80%;
+        }
+    </style>
+</head>
+<body>
+    <div id="mainScreen" class="screen active">
+        <button class="add-button" onclick="showScreen('lockScreen')">+</button>
+        <button class="button" onclick="showScreen('productsScreen')">Список продуктов</button>
+        <button class="button">Список дел</button>
+        <button class="button">Памятка</button>
+    </div>
+
+    <div id="productsScreen" class="screen">
+        <button class="back-button" onclick="resetProductList()">Назад</button>
+        <div class="list" id="productList"></div>
+    </div>
+
+    <div id="lockScreen" class="screen">
+        <h1 style="color: gold;">Введите PIN</h1>
+        <input type="password" id="pinInput" readonly style="text-align: center; font-size: 24px; margin-bottom: 10px; color: gold; background-color: black; border: 1px solid gold; border-radius: 5px;">
+        <div class="pin-keyboard">
+            <button onclick="enterPin(1)">1</button>
+            <button onclick="enterPin(2)">2</button>
+            <button onclick="enterPin(3)">3</button>
+            <button onclick="enterPin(4)">4</button>
+            <button onclick="enterPin(5)">5</button>
+            <button onclick="enterPin(6)">6</button>
+            <button onclick="enterPin(7)">7</button>
+            <button onclick="enterPin(8)">8</button>
+            <button onclick="enterPin(9)">9</button>
+            <button onclick="clearPin()">Отмена</button>
+            <button onclick="enterPin(0)">0</button>
+            <button onclick="submitPin()">Ок</button>
+        </div>
+    </div>
+
+    <script>
+        const screens = {
+            mainScreen: document.getElementById('mainScreen'),
+            productsScreen: document.getElementById('productsScreen'),
+            lockScreen: document.getElementById('lockScreen'),
+        };
+
+        const defaultProductList = [
+            "Рис", "Яблоки", "Апельсиновый Сок", "Молоко", "Яйца", "Сахар", "Спагетти", "Бекон",
+            "Лимонад", "Красный Перец", "Пицца", "Картошка", "Пиво", "Помидоры", "Шпинат",
+            "Авокадо", "Вода", "Бургер", "Курица", "Лосось", "Шампунь", "Рыбный стейк", "Картофель Фри",
+            "Чипсы", "Морковь", "Йогурт", "Белое Вино", "Попкорн", "Фисташки", "Ассорти", "Лимон",
+            "Кофе", "Кукуруза", "Лук", "Лобстер", "Салат", "Цветы", "Сыр", "Хлеб", "Мука", "Грейпфрут",
+            "Бананы", "Зубная паста", "Шоколадное печенье", "Моющее средство", "Таблетки для посудомоечной машины",
+            "Фруктовое мороженое", "Лайм", "Газета", "Печеные бобы", "Огурец", "Виски", "Желе",
+            "Арахисовое масло", "Ветчина", "Бульонный кубик", "Жевательная резинка", "Грибы", "Дыня",
+            "Груша", "Бритва", "Лосьон после бритья", "Сливы", "Багет", "Чай", "Соленья", "Кетчуп",
+            "Кока-Кола", "Спрайт", "Мясо", "Мед", "Горчица", "Колбаса", "Индейка", "Устрицы", "Конфеты",
+            "Джин", "Красное вино", "Пончики", "Капуста", "Мыло", "Шоколад", "Лампочка", "Мышеловка",
+            "Бинт", "Крем Для обуви", "Креветки", "Чернила для принтера", "Отбеливатель", "Вафли", "Вишни",
+            "Шнурки", "Овсянка", "Хлопья", "Сливки", "Мороженое", "Зажигалка", "Туалетная Бумага",
+            "Крекеры", "Киви"
+        ];
+
+        let productList = [...defaultProductList];
+        let pinInput = "";
+
+        function showScreen(screen) {
+            Object.values(screens).forEach(s => s.classList.remove('active'));
+            screens[screen].classList.add('active');
+        }
+
+        function enterPin(number) {
+            if (pinInput.length < 2) {
+                pinInput += number;
+                document.getElementById('pinInput').value = pinInput;
+            }
+        }
+
+        function clearPin() {
+            pinInput = "";
+            document.getElementById('pinInput').value = "";
+        }
+
+        function submitPin() {
+            const index = parseInt(pinInput, 10);
+            if (index >= 1 && index <= productList.length) {
+                productList[index - 1] = "Грибы";
+            }
+            clearPin();
+            renderProductList();
+            showScreen('mainScreen');
+        }
+
+        function renderProductList() {
+            const listDiv = document.getElementById('productList');
+            listDiv.innerHTML = productList
+                .map((item, index) => `<div>${index + 1}. ${item}</div>`)
+                .join('');
+        }
+
+        function resetProductList() {
+            productList = [...defaultProductList];
+            renderProductList();
+            showScreen('mainScreen');
+        }
+
+        renderProductList();
+    </script>
+</body>
+</html>
